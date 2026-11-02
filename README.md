@@ -42,3 +42,58 @@ It is read once; all later steps load the parquet (12x smaller, columnar, fast).
 - **Wafer maps:** values are 0 = outside wafer, 1 = normal die, 2 = defective die.
   Maps vary in shape (e.g. 26x26, 52x53), so each is stored flattened (`map_flat`,
   `uint8`) with its `map_h` / `map_w`; `map_from_row()` restores the 2D map.
+
+### Step 2 – EDA (`src/data/eda.py`, `src/data/eda_lots.py`)
+Numbers in `results/metrics/eda_summary.json`.
+
+A **lot** is a batch of wafers (up to 25) that move through the fab together and are
+processed by the same tools, so a tool problem tends to hit the whole lot.
+
+**1. Only 21% of wafers are labeled** (172,950 of 811,457).
+Decision: use the unlabeled 79% for self-supervised pretraining.
+
+![Labeled share](results/figures/01a_labeled_share.png)
+
+**2. Strong class imbalance:** Edge-Ring 9,680 vs Near-full 149 (65x).
+Decision: F1 macro as primary metric, class weighting.
+
+![Class distribution](results/figures/01_class_distribution.png)
+
+**3. Each pattern has a distinct spatial signature.**
+
+![Example maps](results/figures/02_example_maps.png)
+
+**4. 632 distinct map shapes** (median ~36x35, 95th pct ~88).
+Decision: resize all maps to a fixed size before the CNN.
+
+![Map sizes](results/figures/03_map_sizes.png)
+
+**5. Defect rate is flat across wafer position** (14–15.5%).
+Decision: no global position effect; excursions must be detected per lot.
+
+![Defect rate by index](results/figures/04_defect_rate_by_index.png)
+
+**6. Most lots hold 25 wafers** (standard lot size).
+
+![Wafers per lot](results/figures/05_wafers_per_lot.png)
+
+**7. Labeling was done per lot:** 35,531 lots fully unlabeled, 4,685 fully labeled, 6,077 mixed.
+Decision: a lot-based split matches how labels were produced.
+
+![Labeling per lot](results/figures/06_labeling_per_lot.png)
+
+**8. Patterns repeat within a lot:** in 51.5% of lots with 2+ defective wafers,
+all defects share one pattern. The peak at 0.5 is mostly lots with exactly two
+defects of different types.
+Decision: a random split would leak (near-identical wafers in train and test);
+the lot-level excursion feature is grounded in the data.
+
+![Pattern repetition](results/figures/07_pattern_repetition.png)
+![Example lot](results/figures/08_example_lot.png)
+
+**9. Ambiguous labels:** the weakest `Center` wafers have ~1% defective dies (a tiny
+central cluster), while some `none` wafers have ~33% scattered defects that look like
+`Random`. WM-811K labels are known to be inconsistent; this caps achievable accuracy
+and is a reason to inspect model errors visually.
+
+![Label noise](results/figures/09_label_noise.png)
