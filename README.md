@@ -35,7 +35,7 @@ It is read once; all later steps load the parquet (12x smaller, columnar, fast).
   |---|---|---|
   | `lotName` | `lot_name` | Lot-based train/test split |
   | `waferIndex` | `wafer_index` (int) | Position of the wafer within its lot |
-  | `dieSize` | `die_size` | Yield impact estimation |
+  | `dieSize` | `die_size` | Number of dies on the wafer (verified: equals the die count on the map); used for yield impact |
   | `trianTestLabel` | `orig_split` | Original split (typo in source); not used, since it is not lot-based |
   | – | `wafer_id` | Unique wafer identifier |
 
@@ -54,17 +54,25 @@ Decision: use the unlabeled 79% for self-supervised pretraining.
 
 ![Labeled share](results/figures/01a_labeled_share.png)
 
-**2. Strong class imbalance:** Edge-Ring 9,680 vs Near-full 149 (65x).
+**2. Strong class imbalance:** O.K. 147,431 vs Near-full 149 (~1000x); among defects,
+Edge-Ring 9,680 vs Near-full 149 (65x).
 Decision: F1 macro as primary metric, class weighting.
 
 ![Class distribution](results/figures/01_class_distribution.png)
 
-**3. Each pattern has a distinct spatial signature.**
+**3. Each pattern has a distinct look.** Three typical wafers per class (closest to the
+class median defect share, not hand-picked). `none` is shown as **O.K.** in all figures.
+Scratches are thin and often faint, making Scratch visually the hardest class.
+Some wafers look elliptical: the map only counts dies per row/column and draws each die
+as a square, so wafers with rectangular dies appear stretched. Resizing removes this.
 
 ![Example maps](results/figures/02_example_maps.png)
 
-**4. 632 distinct map shapes** (median ~36x35, 95th pct ~88).
-Decision: resize all maps to a fixed size before the CNN.
+**4. Each product has its own die grid** (632 distinct shapes). Wafers are the same
+physical size, but products with smaller dies fit more of them: from 515 dies (25x27
+grid) to 5,633 dies (88x81 grid).
+Decision: resize all maps to one fixed size before the CNN (nearest-neighbour, so the
+0/1/2 values are preserved).
 
 ![Map sizes](results/figures/03_map_sizes.png)
 
@@ -73,11 +81,13 @@ Decision: no global position effect; excursions must be detected per lot.
 
 ![Defect rate by index](results/figures/04_defect_rate_by_index.png)
 
-**6. Most lots hold 25 wafers** (standard lot size).
+**6. A full lot is 25 wafers** (standard lot size): 47% of lots are full, and 75% of
+all wafers sit in lots of 24–25. Smaller lots (peaks at 1 and 12–13 wafers) are likely
+split or partially recorded lots.
 
 ![Wafers per lot](results/figures/05_wafers_per_lot.png)
 
-**7. Labeling was done per lot:** 35,531 lots fully unlabeled, 4,685 fully labeled, 6,077 mixed.
+**7. Labeling was mostly done per lot (87% of lots are all-or-nothing):** 35,531 lots fully unlabeled, 4,685 fully labeled, 6,077 mixed.
 Decision: a lot-based split matches how labels were produced.
 
 ![Labeling per lot](results/figures/06_labeling_per_lot.png)

@@ -1,17 +1,19 @@
-"""Exploratory data analysis for WM-811K: classes, example maps, map sizes, wafer index.
+"""Exploratory data analysis for WM-811K: entry point and class-level plots.
 
-Lot-level analysis and label noise live in eda_lots.py. Run: python -m src.data.eda
+Pattern-level plots live in eda_patterns.py, lot-level plots in eda_lots.py.
+Run: python -m src.data.eda
 """
 import json
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from matplotlib.ticker import FuncFormatter
 
-from src.config import METRICS_DIR, RANDOM_SEED, WAFERS_PARQUET
-from src.data import eda_lots
-from src.data.load import load_wafers, map_from_row
-from src.data.plot_utils import DEFECTS, FONT_SIZE, draw_map, save, setup_style
+from src.config import METRICS_DIR, WAFERS_PARQUET
+from src.data import eda_lots, eda_patterns
+from src.data.load import load_wafers
+from src.data.plot_utils import CLASSES, DEFECTS, FONT_SIZE, display, save, setup_style
 
 META_COLS = ["wafer_id", "lot_name", "wafer_index", "die_size", "failure_type", "map_h", "map_w"]
 
@@ -35,8 +37,9 @@ def plot_labeled_share(meta: pd.DataFrame) -> dict:
     bars = ax.barh(["Unlabeled", "Labeled"], [n_unl, n_lab], color=["lightgray", "steelblue"])
     for bar, n in zip(bars, [n_unl, n_lab]):
         ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2,
-                f" {n:,} ({n / len(meta):.0%})", va="center")
+                f" {n / 1000:.0f}K ({n / len(meta):.0%})", va="center")
     ax.set_xlim(0, n_unl * 1.35)
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x / 1000:.0f}K"))
     ax.set_xlabel("Wafers")
     ax.set_title("Only 21% of wafers are labeled")
     save(fig, "01a_labeled_share.png")
@@ -46,54 +49,18 @@ def plot_labeled_share(meta: pd.DataFrame) -> dict:
 def plot_class_distribution(meta: pd.DataFrame) -> dict:
     """Bar chart of labeled classes on a log scale."""
     counts = meta["failure_type"].value_counts()
+    counts.index = [display(c) for c in counts.index]
     fig, ax = plt.subplots(figsize=(15, 7))
     sns.barplot(x=counts.index, y=counts.values, ax=ax, color="steelblue")
     ax.set_yscale("log")
-    ax.set_title("Labeled classes (log scale): 65x gap between Edge-Ring and Near-full")
-    ax.set_ylabel("Wafers")
+    ax.set_title("Labeled classes: ~1000x gap between O.K. and Near-full")
+    ax.set_ylabel("Log number of wafers")
     ax.set_xlabel("Pattern")
     ax.tick_params(axis="x", rotation=35)
     for i, v in enumerate(counts.values):
         ax.text(i, v, f"{v:,}", ha="center", va="bottom", fontsize=FONT_SIZE - 4)
     save(fig, "01_class_distribution.png")
     return {k: int(v) for k, v in counts.items()}
-
-
-def plot_examples(samples: pd.DataFrame, n_per_class: int) -> None:
-    """Grid of example wafer maps: one row per class."""
-    classes = DEFECTS + ["none"]
-    fig, axes = plt.subplots(len(classes), n_per_class,
-                             figsize=(n_per_class * 2.6, len(classes) * 2.6))
-    for r, cls in enumerate(classes):
-        rows = samples[samples["failure_type"] == cls]
-        for c in range(n_per_class):
-            axes[r, c].axis("off")
-            if c < len(rows):
-                draw_map(axes[r, c], map_from_row(rows.iloc[c]))
-        axes[r, 0].text(-0.1, 0.5, cls, transform=axes[r, 0].transAxes,
-                        ha="right", va="center", fontsize=FONT_SIZE + 2)
-    fig.suptitle("Example wafer maps (yellow = defective die)", y=1.0)
-    save(fig, "02_example_maps.png")
-
-
-def plot_map_sizes(meta: pd.DataFrame) -> dict:
-    """Histogram of map height/width and the most common shapes."""
-    shapes = meta.groupby(["map_h", "map_w"]).size().nlargest(8)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
-    ax1.hist(meta["map_h"], bins=60, alpha=0.6, label="height")
-    ax1.hist(meta["map_w"], bins=60, alpha=0.6, label="width")
-    ax1.set_yscale("log")
-    ax1.set_title("Map dimensions (dies)")
-    ax1.set_xlabel("Dies")
-    ax1.legend()
-    labels = [f"{h}x{w}" for h, w in shapes.index]
-    ax2.barh(labels[::-1], shapes.values[::-1], color="steelblue")
-    ax2.set_title("8 most common shapes (of 632)")
-    ax2.set_xlabel("Wafers")
-    save(fig, "03_map_sizes.png")
-    return {"distinct_shapes": int(meta.groupby(["map_h", "map_w"]).ngroups),
-            "height_pct": meta["map_h"].quantile([0.05, 0.5, 0.95]).astype(int).tolist(),
-            "width_pct": meta["map_w"].quantile([0.05, 0.5, 0.95]).astype(int).tolist()}
 
 
 def plot_defect_by_index(meta: pd.DataFrame) -> None:
@@ -112,18 +79,14 @@ def plot_defect_by_index(meta: pd.DataFrame) -> None:
 def main() -> None:
     """Run all EDA steps and save figures + a JSON summary."""
     setup_style()
-    n_examples = 6
     meta = load_meta()
     summary = {"labeled_share": plot_labeled_share(meta),
                "class_counts": plot_class_distribution(meta),
-               "map_sizes": plot_map_sizes(meta),
                "lots": eda_lots.run(meta)}
     plot_defect_by_index(meta)
 
-    maps = load_maps(DEFECTS + ["none"])
-    samples = maps.groupby("failure_type", group_keys=False)[maps.columns] \
-        .apply(lambda g: g.sample(min(n_examples, len(g)), random_state=RANDOM_SEED))
-    plot_examples(samples, n_examples)
+    maps = load_maps(CLASSES)
+    summary["map_sizes"] = eda_patterns.run(meta, maps)
     eda_lots.plot_label_noise(maps)
 
     METRICS_DIR.mkdir(parents=True, exist_ok=True)

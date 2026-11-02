@@ -4,7 +4,7 @@
     "unlabeled": 638507
   },
   "class_counts": {
-    "none": 147431,
+    "O.K.": 147431,
     "Edge-Ring": 9680,
     "Edge-Loc": 5189,
     "Center": 4294,
@@ -13,19 +13,6 @@
     "Random": 866,
     "Donut": 555,
     "Near-full": 149
-  },
-  "map_sizes": {
-    "distinct_shapes": 632,
-    "height_pct": [
-      25,
-      36,
-      88
-    ],
-    "width_pct": [
-      26,
-      35,
-      83
-    ]
   },
   "lots": {
     "lots": 46293,
@@ -41,5 +28,13 @@
     },
     "lots_with_2plus_defects": 3669,
     "lots_single_pattern_pct": 51.5
+  },
+  "map_sizes": {
+    "distinct_shapes": 632,
+    "dies_per_wafer_pct": [
+      515,
+      953,
+      5633
+    ]
   }
 }
