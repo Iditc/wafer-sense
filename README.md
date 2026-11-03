@@ -148,3 +148,32 @@ fully labeled lots only, and break results down by die size.
 | Labels and patterns cluster by lot | Lot-based split, one split for the whole project |
 | Ambiguous labels | Inspect model errors visually; accuracy has a ceiling |
 | Mixed lots hold half the defects | Keep them; stratify by lot type; report by die size |
+
+### Step 3 – Lot-based split and fixed-size maps (`src/data/split.py`, `src/data/cache_maps.py`)
+**One split for the whole project.** Every lot is assigned once to train, val or test
+(70/15/15) and never changes; each later stage only filters from it, so every model is
+compared on the same untouched test set.
+
+- **How:** `StratifiedGroupKFold` with 20 folds (14 train / 3 val / 3 test), grouped by
+  lot and stratified by lot type (full / mixed / unlabeled) and class. Unlabeled wafers
+  get the split of their lot too, so test-lot wafers never reach self-supervised training.
+- **Verified:** no lot appears in more than one split; every class is split close to
+  70/15/15 (Random, the furthest off, is 73/14/14).
+- **Result:** 567,019 / 122,092 / 122,346 wafers in 32,295 / 6,985 / 7,013 lots.
+  The rarest class, Near-full, has 106 / 21 / 22 wafers.
+- **Saved:** `data/processed/split.parquet` (wafer_id, lot_name, lot_type, split);
+  numbers in `results/metrics/split_summary.json`.
+
+| Split role | Used for |
+|---|---|
+| train | Learning |
+| val | Hyperparameters, thresholds, early stopping |
+| test | Opened only for the final evaluation of each stage |
+
+![Split class share](results/figures/10_split_class_share.png)
+
+**Fixed-size maps.** CNNs need one input size, so maps are resized to 64x64 with
+nearest-neighbour (values stay 0/1/2). This is a model-input cache only: the original
+maps stay in `wafers.parquet` for yield, Grad-CAM and display. Labeled wafers are cached
+now (`maps64_labeled.npy`, 173K x 64 x 64, 708 MB); unlabeled wafers are added before
+self-supervised training (`--all`). Input size (32 / 64 / 96) is an experiment in week 2.

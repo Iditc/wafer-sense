@@ -9,6 +9,7 @@ PROCESSED_DIR = DATA_DIR / "processed"
 
 RAW_PICKLE = RAW_DIR / "LSWMD.pkl"
 WAFERS_PARQUET = PROCESSED_DIR / "wafers.parquet"
+SPLIT_PARQUET = PROCESSED_DIR / "split.parquet"
 
 FIGURES_DIR = ROOT / "results" / "figures"
 METRICS_DIR = ROOT / "results" / "metrics"

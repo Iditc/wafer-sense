@@ -1,0 +1,69 @@
+{
+  "wafers": {
+    "train": 567019,
+    "val": 122092,
+    "test": 122346
+  },
+  "lots": {
+    "train": 32295,
+    "val": 6985,
+    "test": 7013
+  },
+  "classes": {
+    "train": {
+      "Center": 3005,
+      "Donut": 392,
+      "Edge-Loc": 3633,
+      "Edge-Ring": 6777,
+      "Loc": 2511,
+      "Near-full": 106,
+      "Random": 630,
+      "Scratch": 833,
+      "none": 103209
+    },
+    "val": {
+      "Center": 647,
+      "Donut": 83,
+      "Edge-Loc": 779,
+      "Edge-Ring": 1452,
+      "Loc": 544,
+      "Near-full": 21,
+      "Random": 117,
+      "Scratch": 178,
+      "none": 22035
+    },
+    "test": {
+      "Center": 642,
+      "Donut": 80,
+      "Edge-Loc": 777,
+      "Edge-Ring": 1451,
+      "Loc": 538,
+      "Near-full": 22,
+      "Random": 119,
+      "Scratch": 182,
+      "none": 22187
+    }
+  },
+  "lot_types": {
+    "train": {
+      "full": 78334,
+      "mixed": 93210,
+      "unlabeled": 395475
+    },
+    "val": {
+      "full": 16679,
+      "mixed": 19927,
+      "unlabeled": 85486
+    },
+    "test": {
+      "full": 16755,
+      "mixed": 19941,
+      "unlabeled": 85650
+    }
+  },
+  "median_die_size": {
+    "train": 953.0,
+    "val": 1032.0,
+    "test": 980.0
+  }
+}
