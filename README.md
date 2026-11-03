@@ -107,3 +107,44 @@ central cluster), while some `none` wafers have ~33% scattered defects that look
 and is a reason to inspect model errors visually.
 
 ![Label noise](results/figures/09_label_noise.png)
+
+**10. Partially labeled lots are worth keeping.** The 6,077 mixed lots hold 61,182
+labeled wafers and almost half of all defects (12,496 of 25,519); dropping them would
+remove 83% of Center and 82% of Donut examples.
+
+| Pattern | Fully labeled lots | Mixed lots |
+|---|---|---|
+| Center | 751 | 3,543 |
+| Donut | 100 | 455 |
+| Edge-Loc | 2,371 | 2,818 |
+| Edge-Ring | 7,341 | 2,339 |
+| Loc | 1,490 | 2,103 |
+| Near-full | 86 | 63 |
+| Random | 284 | 582 |
+| Scratch | 600 | 593 |
+| O.K. | 98,745 | 48,686 |
+
+Labeling bias was checked:
+- **Within a mixed lot, labeling looks random.** The labeled share is 45–47% at every
+  wafer index, and labeled and unlabeled wafers have a similar share of defective dies
+  (median 14% vs 12%; >20% defective: 20% vs 22%). This share is computed from the map,
+  so it does not depend on the label.
+- **Between lots, labeling is biased.** Mixed lots have a higher defect rate than fully
+  labeled lots (20.4% vs 11.7%), and which lots got labeled depends on the product:
+  heavily labeled lots are mostly small-die products (median 533 dies), while fully
+  unlabeled lots are mostly large-die products (median 1,109 dies).
+
+Decision: keep mixed lots and keep each lot whole in one split. Stratify the split by
+lot type (full / mixed) as well as by class. Report test results on all lots and on
+fully labeled lots only, and break results down by die size.
+
+### EDA summary
+| Finding | Decision |
+|---|---|
+| 79% of wafers are unlabeled | Self-supervised pretraining on unlabeled wafers |
+| ~1000x class imbalance | F1 macro, class weighting |
+| 632 die grid shapes | Resize to a fixed size (nearest-neighbour); keep originals for yield and display |
+| No position effect within a lot | Detect excursions per lot, not globally |
+| Labels and patterns cluster by lot | Lot-based split, one split for the whole project |
+| Ambiguous labels | Inspect model errors visually; accuracy has a ceiling |
+| Mixed lots hold half the defects | Keep them; stratify by lot type; report by die size |
