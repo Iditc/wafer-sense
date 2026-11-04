@@ -30,8 +30,14 @@ def split_index(split: str, size: int = 64) -> tuple[np.ndarray, np.ndarray]:
     return rows["row"].to_numpy(), labels
 
 
-def encode(wafer_map: np.ndarray) -> np.ndarray:
-    """One-hot encode a 0/1/2 map into 2 float channels: wafer area and defects."""
+def encode(wafer_map: np.ndarray, channels: int = 2) -> np.ndarray:
+    """Turn a 0/1/2 map into model input.
+
+    channels=2: one-hot, wafer area and defects (the default).
+    channels=1: the raw values scaled to 0 / 0.5 / 1 (used only for comparison).
+    """
+    if channels == 1:
+        return (wafer_map[None] / 2).astype(np.float32)
     return np.stack([wafer_map > 0, wafer_map == 2]).astype(np.float32)
 
 
@@ -54,8 +60,9 @@ class WaferDataset(Dataset):
     """Labeled wafers of one split, read lazily from the memory-mapped cache."""
 
     def __init__(self, split: str, size: int = 64, train_aug: bool = False,
-                 limit: int | None = None, seed: int = 0):
+                 limit: int | None = None, seed: int = 0, channels: int = 2):
         self.maps_path, _ = cache_paths(size, "labeled")
+        self.channels = channels
         self.rows, self.labels = split_index(split, size)
         if limit is not None:
             pick = np.random.default_rng(seed).permutation(len(self.rows))[:limit]
@@ -70,7 +77,7 @@ class WaferDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[torch.Tensor, int]:
         if self._maps is None:
             self._maps = np.load(self.maps_path, mmap_mode="r")
-        x = encode(self._maps[self.rows[i]])
+        x = encode(self._maps[self.rows[i]], self.channels)
         if self.train_aug:
             x = augment(x, self.rng)
         return torch.from_numpy(x), int(self.labels[i])

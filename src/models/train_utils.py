@@ -29,10 +29,11 @@ def get_device() -> torch.device:
 
 
 def make_loaders(size: int = 64, batch_size: int = 256, num_workers: int = 2,
-                 limit: int | None = None) -> dict[str, DataLoader]:
+                 limit: int | None = None, channels: int = 2,
+                 seed: int = RANDOM_SEED) -> dict[str, DataLoader]:
     """Train (augmented, shuffled) and val (as is) loaders."""
-    train = WaferDataset("train", size, train_aug=True, limit=limit)
-    val = WaferDataset("val", size, limit=limit)
+    train = WaferDataset("train", size, train_aug=True, limit=limit, seed=seed, channels=channels)
+    val = WaferDataset("val", size, limit=limit, channels=channels)
     kwargs = {"batch_size": batch_size, "num_workers": num_workers,
               "pin_memory": torch.cuda.is_available(), "persistent_workers": num_workers > 0}
     return {"train": DataLoader(train, shuffle=True, **kwargs),

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 
+from src.config import RANDOM_SEED
 from src.data.plot_utils import save, setup_style
 from src.models.cnn import WaferCNN, count_params
 from src.models.dataset import class_weights
@@ -27,6 +28,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--batch-size", type=int, default=256)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--no-weights", action="store_true", help="plain loss, no class weights")
+    p.add_argument("--channels", type=int, default=2, choices=[1, 2],
+                   help="2 = one-hot input, 1 = raw map scaled to 0..1")
+    p.add_argument("--seed", type=int, default=RANDOM_SEED, help="change to measure run-to-run noise")
     p.add_argument("--limit", type=int, default=None, help="use only N wafers per split (testing)")
     p.add_argument("--workers", type=int, default=2)
     return p.parse_args()
@@ -49,9 +53,10 @@ def plot_history(history: list[dict], name: str) -> None:
 def main() -> None:
     """Train, pick the best epoch on val, and save val metrics and figures."""
     args = parse_args()
-    set_seed()
-    loaders = make_loaders(args.size, args.batch_size, args.workers, args.limit)
-    model = WaferCNN()
+    set_seed(args.seed)
+    loaders = make_loaders(args.size, args.batch_size, args.workers, args.limit,
+                           args.channels, args.seed)
+    model = WaferCNN(in_channels=args.channels)
     print(f"{count_params(model):,} parameters | device {get_device()} | "
           f"{len(loaders['train'].dataset):,} train / {len(loaders['val'].dataset):,} val wafers")
 
