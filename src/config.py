@@ -13,5 +13,6 @@ SPLIT_PARQUET = PROCESSED_DIR / "split.parquet"
 
 FIGURES_DIR = ROOT / "results" / "figures"
 METRICS_DIR = ROOT / "results" / "metrics"
+CHECKPOINT_DIR = ROOT / "checkpoints"  # model weights (*.pt, git-ignored)
 
 RANDOM_SEED = 42
