@@ -22,7 +22,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--name", default="cnn_baseline", help="name for metrics, figures and weights")
     p.add_argument("--size", type=int, default=64, help="input map size (cache must exist)")
     p.add_argument("--epochs", type=int, default=30)
-    p.add_argument("--patience", type=int, default=5)
+    p.add_argument("--patience", type=int, default=8)
+    p.add_argument("--no-schedule", action="store_true", help="constant lr, no cosine decay")
     p.add_argument("--batch-size", type=int, default=256)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--no-weights", action="store_true", help="plain loss, no class weights")
@@ -32,10 +33,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def plot_history(history: list[dict], name: str) -> None:
-    """Train loss and val F1 macro per epoch, side by side."""
+    """Learning rate, train loss and val F1 macro per epoch, side by side."""
     setup_style()
     epochs = [h["epoch"] for h in history]
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(24, 6))
+    ax0.plot(epochs, [h["lr"] for h in history], marker="o", color="gray")
+    ax0.set(xlabel="Epoch", ylabel="Learning rate", title="Learning rate")
     ax1.plot(epochs, [h["train_loss"] for h in history], marker="o")
     ax1.set(xlabel="Epoch", ylabel="Train loss", title="Train loss")
     ax2.plot(epochs, [h["val_f1_macro"] for h in history], marker="o", color="darkorange")
@@ -55,14 +58,17 @@ def main() -> None:
     weight = None if args.no_weights else class_weights(loaders["train"].dataset.labels)
     loss_fn = nn.CrossEntropyLoss(weight=weight)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    history = fit(model, loaders, loss_fn, optimizer, args.name, args.epochs, args.patience)
+    # Cosine decay: large steps early, small steps at the end so the weights settle
+    scheduler = None if args.no_schedule else torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=args.epochs)
+    history = fit(model, loaders, loss_fn, optimizer, args.name, args.epochs, args.patience, scheduler)
 
     y, probs = predict(model, loaders["val"], get_device())
     metrics = evaluate(y, probs.argmax(axis=1))
     print("Val:", summary_line(metrics))
     save_metrics({"split": "val", "config": vars(args), "history": history, **metrics}, args.name)
     plot_confusion(metrics["confusion_matrix"],
-                   f"Baseline CNN on val: F1 macro {metrics['f1_macro']:.3f}",
+                   f"CNN ({args.name}) on val: F1 macro {metrics['f1_macro']:.3f}",
                    f"{args.name}_val_confusion.png")
     plot_history(history, args.name)
 

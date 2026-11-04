@@ -67,8 +67,12 @@ def predict(model: nn.Module, loader: DataLoader, device: torch.device) -> tuple
 
 
 def fit(model: nn.Module, loaders: dict[str, DataLoader], loss_fn: nn.Module,
-        optimizer: torch.optim.Optimizer, name: str, epochs: int = 30, patience: int = 5) -> list[dict]:
-    """Train with early stopping on val F1 macro; returns the per-epoch history."""
+        optimizer: torch.optim.Optimizer, name: str, epochs: int = 30, patience: int = 8,
+        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None) -> list[dict]:
+    """Train with early stopping on val F1 macro; returns the per-epoch history.
+
+    If a scheduler is given, it is stepped once per epoch (e.g. cosine decay).
+    """
     device = get_device()
     model.to(device)
     loss_fn.to(device)
@@ -78,11 +82,15 @@ def fit(model: nn.Module, loaders: dict[str, DataLoader], loss_fn: nn.Module,
 
     for epoch in range(1, epochs + 1):
         start = time.time()
+        lr = optimizer.param_groups[0]["lr"]
         loss = train_epoch(model, loaders["train"], loss_fn, optimizer, device)
+        if scheduler is not None:
+            scheduler.step()
         y, probs = predict(model, loaders["val"], device)
         metrics = evaluate(y, probs.argmax(axis=1))
-        history.append({"epoch": epoch, "train_loss": loss, "val_f1_macro": metrics["f1_macro"]})
-        print(f"epoch {epoch:2d} | loss {loss:.4f} | val {summary_line(metrics)} | {time.time() - start:.0f}s")
+        history.append({"epoch": epoch, "lr": lr, "train_loss": loss, "val_f1_macro": metrics["f1_macro"]})
+        print(f"epoch {epoch:2d} | lr {lr:.2e} | loss {loss:.4f} | val {summary_line(metrics)} | "
+              f"{time.time() - start:.0f}s")
 
         if metrics["f1_macro"] > best_f1:
             best_f1, bad_epochs = metrics["f1_macro"], 0
