@@ -177,3 +177,34 @@ nearest-neighbour (values stay 0/1/2). This is a model-input cache only: the ori
 maps stay in `wafers.parquet` for yield, Grad-CAM and display. Labeled wafers are cached
 now (`maps64_labeled.npy`, 173K x 64 x 64, 708 MB); unlabeled wafers are added before
 self-supervised training (`--all`). Input size (32 / 64 / 96) is an experiment in week 2.
+
+### Step 4 – Baseline CNN (`src/models/`)
+A supervised classifier for the 9 classes, trained on Colab (T4 GPU). All numbers are on val;
+test stays closed until the final model.
+
+- **Input:** 64x64 map, one-hot encoded into 2 channels (wafer area, defects), with random
+  90° rotations and flips on train.
+- **Model:** 4 blocks of (Conv 3x3 → BatchNorm → ReLU) x2 → MaxPool, channels 32/64/128/256,
+  global average pool, dropout 0.3, linear head. 1,175,241 parameters.
+- **Training:** cross-entropy with class weights 1/√count, AdamW (lr 1e-3, weight decay 1e-4),
+  batch 256, up to 30 epochs, best epoch by val F1 macro (patience 8).
+- **Learning-rate schedule:** with a constant lr, val F1 swung between 0.64 and 0.78
+  (best 0.777). Cosine decay to 0 over 30 epochs let the weights settle: **0.895**.
+
+![Baseline confusion matrix](results/figures/cnn_cosine_val_confusion.png)
+
+**One-change experiments.** Each run changes one setting; a repeat with another seed
+measures run-to-run noise.
+
+| Run | F1 macro | Missed defects | False alarms | Verdict |
+|---|---|---|---|---|
+| **Baseline** (64, weights, 2 channels) | **0.895** | **3.2%** | 1.4% | Kept |
+| Same, seed 1 | 0.892 | 3.6% | 1.4% | Noise ≈ 0.003 |
+| Input 32 | 0.849 | 7.9% | 1.6% | Worse on every class |
+| Input 96 | 0.894 | 5.7% | 0.7% | Same F1, 2x slower |
+| No class weights | 0.912 | 6.5% | 0.4% | Higher F1, 2x missed defects |
+| 1 channel (0 / 0.5 / 1) | 0.886 | 6.4% | 0.8% | One-hot is better |
+
+**Model selection rule (from here on):** the highest val F1 macro among models that miss
+at most 4% of defects. F1 macro alone would have picked "no class weights", but a missed
+defect costs more than a false alarm: the bad wafer moves on down the line.
