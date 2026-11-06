@@ -16,3 +16,7 @@ METRICS_DIR = ROOT / "results" / "metrics"
 CHECKPOINT_DIR = ROOT / "checkpoints"  # model weights (*.pt, git-ignored)
 
 RANDOM_SEED = 42
+
+# Model selection rule: highest val F1 macro among models whose missed-defect rate
+# (true defect predicted O.K.) is at most this. A parameter; compare.py tries other values.
+MAX_MISSED_DEFECT_RATE = 0.04

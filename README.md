@@ -208,3 +208,9 @@ measures run-to-run noise.
 **Model selection rule (from here on):** the highest val F1 macro among models that miss
 at most 4% of defects. F1 macro alone would have picked "no class weights", but a missed
 defect costs more than a false alarm: the bad wafer moves on down the line.
+The 4% is a parameter (`MAX_MISSED_DEFECT_RATE` in `src/config.py`); `python -m src.models.compare`
+shows the winner under other limits:
+
+| Missed-defect limit | ≤ 3% | ≤ 4% | ≤ 5% | ≤ 7% | none |
+|---|---|---|---|---|---|
+| Winner | no run passes | baseline | baseline | no weights | no weights |
