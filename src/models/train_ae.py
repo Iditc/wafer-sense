@@ -6,6 +6,7 @@ Run (Colab GPU): python -m src.models.train_ae --name ae_code128
 Quick local check: python -m src.models.train_ae --limit 2000 --epochs 2 --workers 0 --name _smoke
 """
 import argparse
+import json
 import time
 
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from src.config import CHECKPOINT_DIR, MAX_MISSED_DEFECT_RATE, RANDOM_SEED
+from src.config import CHECKPOINT_DIR, MAX_MISSED_DEFECT_RATE, METRICS_DIR, RANDOM_SEED
 from src.data.plot_utils import save, setup_style
 from src.models import ae_eval
 from src.models.autoencoder import WaferAE
@@ -37,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--limit", type=int, default=None, help="use only N wafers per split (testing)")
     p.add_argument("--workers", type=int, default=2)
     p.add_argument("--seed", type=int, default=RANDOM_SEED)
+    p.add_argument("--rescore", action="store_true",
+                   help="skip training: load checkpoints/<name>.pt and recompute scores and figures")
     return p.parse_args()
 
 
@@ -129,7 +132,11 @@ def main() -> None:
     print(f"{count_params(model):,} parameters | device {device} | "
           f"{len(loaders['train'].dataset):,} O.K. train / {len(loaders['val_all'].dataset):,} val wafers")
 
-    history = fit(model, loaders, args, device)
+    if args.rescore:
+        model.load_state_dict(torch.load(CHECKPOINT_DIR / f"{args.name}.pt", map_location=device))
+        history = json.loads((METRICS_DIR / f"{args.name}.json").read_text(encoding="utf-8"))["history"]
+    else:
+        history = fit(model, loaders, args, device)
     y, scores = ae_eval.compute_scores(model, loaders["val_all"], device)
     result = ae_eval.evaluate_scores(y, scores, args.false_alarm, MAX_MISSED_DEFECT_RATE)
     print("Val:", ae_eval.summary_line(result))
@@ -143,7 +150,7 @@ def main() -> None:
         scores[best], y, op["threshold"], f"AE ({args.name}): {best} score per class on val",
         f"{args.name}_scores.png")
     ae_eval.plot_examples(model, loaders["val_all"].dataset, scores[best],
-                          f"AE ({args.name}): typical val wafers", f"{args.name}_examples.png", device)
+                          f"AE ({args.name}): typical val wafers", f"{args.name}_examples.png", device, best)
     plot_history(history, args.name)
 
 

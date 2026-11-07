@@ -5,7 +5,10 @@ wafer-area channel only reflect wafer shape, not defects. O.K. wafers also have
 scattered single failed dies that no model can predict, so three scores are tried:
   mean     - mean error over the wafer
   top1     - mean of the 1% of pixels with the largest error
-  blur_max - largest error after a 5x5 blur; a blur fades single dies but keeps clusters
+  blur_max - largest error after a 5x5 blur
+  density  - largest local defect density that the rebuild does not explain: blur the input
+             and the rebuild separately, then subtract. Scattered single dies blur to a low
+             density, close to what the model predicts; an unexplained cluster stays high.
 The task is defect vs O.K.; the best score is chosen on val by AUROC.
 """
 import matplotlib.pyplot as plt
@@ -18,8 +21,14 @@ from torch.utils.data import DataLoader
 from src.data.plot_utils import CLASSES, display, save, setup_style
 from src.models.metrics import OK_INDEX
 
-SCORES = ("mean", "top1", "blur_max")
+SCORES = ("mean", "top1", "blur_max", "density")
 BLUR = 5
+DENSITY_BLUR = 11  # best of 3-15 on val
+
+
+def blur(img: torch.Tensor, size: int) -> torch.Tensor:
+    """Mean over a size x size window around each pixel (N x H x W)."""
+    return F.avg_pool2d(img[:, None], size, stride=1, padding=size // 2)[:, 0]
 
 
 def error_map(model: torch.nn.Module, x: torch.Tensor) -> torch.Tensor:
@@ -28,15 +37,25 @@ def error_map(model: torch.nn.Module, x: torch.Tensor) -> torch.Tensor:
     return (rebuilt[:, 1] - x[:, 1]).abs() * x[:, 0]
 
 
-def batch_scores(err: torch.Tensor, area: torch.Tensor) -> dict[str, torch.Tensor]:
-    """The three anomaly scores for a batch of error maps."""
+def density_map(model: torch.nn.Module, x: torch.Tensor, size: int = DENSITY_BLUR) -> torch.Tensor:
+    """Local defect density of the input minus that of the rebuild (N x H x W)."""
+    rebuilt = torch.sigmoid(model(x))[:, 1] * x[:, 0]
+    return blur(x[:, 1], size) - blur(rebuilt, size)
+
+
+def batch_scores(model: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    """The anomaly scores for a batch of input maps."""
+    area = x[:, 0]
+    rebuilt = torch.sigmoid(model(x))[:, 1] * area
+    err = (rebuilt - x[:, 1]).abs() * area
     flat = err.flatten(1)
     k = max(1, int(0.01 * flat.shape[1]))
-    blurred = F.avg_pool2d(err[:, None], BLUR, stride=1, padding=BLUR // 2)
+    density = blur(x[:, 1], DENSITY_BLUR) - blur(rebuilt, DENSITY_BLUR)
     return {
         "mean": flat.sum(1) / area.flatten(1).sum(1).clamp(min=1),
         "top1": flat.topk(k, dim=1).values.mean(1),
-        "blur_max": blurred.flatten(1).amax(1),
+        "blur_max": blur(err, BLUR).flatten(1).amax(1),
+        "density": density.flatten(1).amax(1),
     }
 
 
@@ -48,7 +67,7 @@ def compute_scores(model: torch.nn.Module, loader: DataLoader,
     ys, out = [], {s: [] for s in SCORES}
     for x, y in loader:
         x = x.to(device)
-        for name, value in batch_scores(error_map(model, x), x[:, 0]).items():
+        for name, value in batch_scores(model, x).items():
             out[name].append(value.cpu())
         ys.append(y)
     return torch.cat(ys).numpy(), {s: torch.cat(v).numpy() for s, v in out.items()}
@@ -130,9 +149,9 @@ def plot_scores_by_class(score: np.ndarray, y: np.ndarray, threshold: float,
 
 @torch.no_grad()
 def plot_examples(model: torch.nn.Module, dataset, score: np.ndarray, title: str,
-                  filename: str, device: torch.device,
+                  filename: str, device: torch.device, score_name: str = "top1",
                   classes: tuple[str, ...] = ("none", "Center", "Edge-Ring", "Loc", "Scratch", "Random")) -> None:
-    """For a typical wafer of each class: input, rebuilt map and error map."""
+    """For a typical wafer of each class: input, rebuilt map, and the map behind the score."""
     setup_style()
     model.eval()
     labels = np.asarray(dataset.labels)
@@ -143,10 +162,14 @@ def plot_examples(model: torch.nn.Module, dataset, score: np.ndarray, title: str
         x = dataset[i][0][None].to(device)
         rebuilt = torch.sigmoid(model(x))[0].cpu().numpy()
         x = x[0].cpu().numpy()
-        err = error_map(model, torch.from_numpy(x)[None].to(device))[0].cpu().numpy()
+        xt = torch.from_numpy(x)[None].to(device)
+        if score_name == "density":
+            err, label = density_map(model, xt)[0].clamp(min=0).cpu().numpy(), "Unexplained density"
+        else:
+            err, label = error_map(model, xt)[0].cpu().numpy(), "Error"
         panels = [(x[0] + x[1], "viridis", 2, f"{display(cls)}: input"),
                   (rebuilt[0] * x[0] + rebuilt[1] * x[0], "viridis", 2, "Rebuilt"),
-                  (err, "magma", 1, f"Error (score {score[i]:.3f})")]
+                  (err, "magma", 1, f"{label} ({score[i]:.3f})")]
         for ax, (img, cmap, vmax, name) in zip(row, panels):
             ax.imshow(img, cmap=cmap, vmin=0, vmax=vmax, interpolation="nearest")
             ax.set_title(name, fontsize=16)
