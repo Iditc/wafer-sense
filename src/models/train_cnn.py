@@ -2,6 +2,8 @@
 
 Run (Colab GPU): python -m src.models.train_cnn
 Quick local check: python -m src.models.train_cnn --limit 2000 --epochs 2 --workers 0 --name _smoke
+Few labels: --label-frac 0.01 (give more epochs: each epoch is short).
+Never-seen type: --exclude Scratch (val F1 macro then counts Scratch as 0; compare with the embedding tests).
 """
 import argparse
 
@@ -31,6 +33,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--channels", type=int, default=2, choices=[1, 2],
                    help="2 = one-hot input, 1 = raw map scaled to 0..1")
     p.add_argument("--seed", type=int, default=RANDOM_SEED, help="change to measure run-to-run noise")
+    p.add_argument("--label-frac", type=float, default=None,
+                   help="train on this share of each class's labels (e.g. 0.01)")
+    p.add_argument("--exclude", default=None, help="defect type left out of train and val (e.g. Scratch)")
     p.add_argument("--limit", type=int, default=None, help="use only N wafers per split (testing)")
     p.add_argument("--workers", type=int, default=2)
     return p.parse_args()
@@ -55,7 +60,7 @@ def main() -> None:
     args = parse_args()
     set_seed(args.seed)
     loaders = make_loaders(args.size, args.batch_size, args.workers, args.limit,
-                           args.channels, args.seed)
+                           args.channels, args.seed, args.label_frac, args.exclude)
     model = WaferCNN(in_channels=args.channels)
     print(f"{count_params(model):,} parameters | device {get_device()} | "
           f"{len(loaders['train'].dataset):,} train / {len(loaders['val'].dataset):,} val wafers")

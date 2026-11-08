@@ -52,8 +52,16 @@ def augment(x: np.ndarray, rng: np.random.Generator) -> np.ndarray:
 def class_weights(labels: np.ndarray) -> torch.Tensor:
     """Loss weights proportional to 1/sqrt(class count), scaled to mean 1."""
     counts = np.bincount(labels, minlength=len(CLASSES)).astype(np.float64)
-    weights = 1.0 / np.sqrt(np.maximum(counts, 1))
-    return torch.tensor(weights / weights.mean(), dtype=torch.float32)
+    weights = np.where(counts > 0, 1.0 / np.sqrt(np.maximum(counts, 1)), 0.0)  # absent class: 0
+    return torch.tensor(weights / weights[counts > 0].mean(), dtype=torch.float32)
+
+
+def sample_labels(y: np.ndarray, frac: float, seed: int = 0) -> np.ndarray:
+    """Row indices: `frac` of each class, at least one wafer per class."""
+    rng = np.random.default_rng(seed)
+    rows = [rng.permutation(np.flatnonzero(y == c))[:max(1, round(frac * (y == c).sum()))]
+            for c in np.unique(y)]
+    return np.concatenate(rows)
 
 
 class WaferDataset(Dataset):
@@ -70,6 +78,11 @@ class WaferDataset(Dataset):
         self.train_aug = train_aug
         self.rng = np.random.default_rng(seed)
         self._maps = None  # opened on first access, so DataLoader workers do not copy it
+
+    def keep(self, pick: np.ndarray) -> "WaferDataset":
+        """Keep only the wafers at these positions (few-label and left-out-type runs)."""
+        self.rows, self.labels = self.rows[pick], self.labels[pick]
+        return self
 
     def __len__(self) -> int:
         return len(self.rows)

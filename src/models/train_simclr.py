@@ -20,7 +20,7 @@ from src.data.plot_utils import save, setup_style
 from src.models.cnn import count_params
 from src.models.dataset import MapDataset
 from src.models.metrics import save_metrics
-from src.models.simclr import SimCLR, nt_xent, random_view
+from src.models.simclr import ADD_MAX, DROP_MAX, SimCLR, nt_xent, random_view
 from src.models.train_utils import get_device, set_seed
 
 
@@ -32,6 +32,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--epochs", type=int, default=50)
     p.add_argument("--batch-size", type=int, default=256)
     p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--add-max", type=float, default=ADD_MAX, help="die noise: max share of dies added (0 = off)")
+    p.add_argument("--drop-max", type=float, default=DROP_MAX, help="die noise: max share of defects dropped (0 = off)")
     p.add_argument("--samples", type=int, default=200_000, help="wafers sampled per epoch")
     p.add_argument("--subset", default="all", choices=["all", "labeled"],
                    help="map cache to read: all wafers, or labeled only (for quick tests)")
@@ -53,17 +55,17 @@ def make_loader(args: argparse.Namespace) -> DataLoader:
 
 
 def train_epoch(model: SimCLR, loader: DataLoader, optimizer: torch.optim.Optimizer,
-                scaler: torch.amp.GradScaler, temperature: float, device: torch.device) -> tuple[float, float]:
+                scaler: torch.amp.GradScaler, args: argparse.Namespace, device: torch.device) -> tuple[float, float]:
     """One pass; returns the mean loss and the mean pair accuracy."""
     model.train()
     use_amp = device.type == "cuda"
     total_loss, total_acc, n = 0.0, 0.0, 0
     for x in loader:
         x = x.to(device, non_blocking=True)
-        views = torch.cat([random_view(x), random_view(x)])  # one batch, so BatchNorm sees both
+        views = torch.cat([random_view(x, args.add_max, args.drop_max) for _ in range(2)])  # one batch for BatchNorm
         with torch.autocast(device.type, enabled=use_amp):
             z = model(views)
-        loss, acc = nt_xent(*z.chunk(2), temperature)
+        loss, acc = nt_xent(*z.chunk(2), args.temperature)
         optimizer.zero_grad()
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -89,7 +91,7 @@ def fit(model: SimCLR, loader: DataLoader, args: argparse.Namespace, device: tor
 
     for epoch in range(start_epoch, args.epochs + 1):
         start, lr = time.time(), optimizer.param_groups[0]["lr"]
-        loss, acc = train_epoch(model, loader, optimizer, scaler, args.temperature, device)
+        loss, acc = train_epoch(model, loader, optimizer, scaler, args, device)
         scheduler.step()
         history.append({"epoch": epoch, "lr": lr, "loss": loss, "pair_acc": acc})
         print(f"epoch {epoch:2d} | lr {lr:.2e} | loss {loss:.4f} | pair acc {acc:.1%} | "
@@ -113,7 +115,8 @@ def plot_history(history: list[dict], name: str) -> None:
     save(fig, f"{name}_history.png")
 
 
-def plot_views(data: MapDataset, name: str, n_wafers: int = 4, n_views: int = 4, seed: int = 0) -> None:
+def plot_views(data: MapDataset, args: argparse.Namespace, n_wafers: int = 4, n_views: int = 4,
+               seed: int = 0) -> None:
     """A few train wafers next to random views of them, to check the augmentation."""
     setup_style()
     gen = torch.Generator().manual_seed(seed)
@@ -121,7 +124,7 @@ def plot_views(data: MapDataset, name: str, n_wafers: int = 4, n_views: int = 4,
     x = torch.stack([data[i] for i in picks])
     fig, axes = plt.subplots(n_wafers, n_views + 1, figsize=(3 * (n_views + 1), 3 * n_wafers))
     for col in range(n_views + 1):
-        batch = x if col == 0 else random_view(x)
+        batch = x if col == 0 else random_view(x, args.add_max, args.drop_max)
         for row in range(n_wafers):
             ax = axes[row, col]
             ax.imshow((batch[row, 0] + batch[row, 1]).numpy(), cmap="viridis", vmin=0, vmax=2,
@@ -129,7 +132,7 @@ def plot_views(data: MapDataset, name: str, n_wafers: int = 4, n_views: int = 4,
             ax.axis("off")
             if row == 0:
                 ax.set_title("Original" if col == 0 else f"View {col}")
-    save(fig, f"{name}_views.png")
+    save(fig, f"{args.name}_views.png")
 
 
 def main() -> None:
@@ -141,7 +144,7 @@ def main() -> None:
     model = SimCLR().to(device)
     print(f"{count_params(model):,} parameters | device {device} | {len(loader.dataset):,} train wafers, "
           f"{len(loader) * args.batch_size:,} per epoch | temperature {args.temperature}")
-    plot_views(loader.dataset, args.name)
+    plot_views(loader.dataset, args)
 
     history = fit(model, loader, args, device)
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)

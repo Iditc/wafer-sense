@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 
 from src.data.plot_utils import CLASSES, display
-from src.models.dataset import class_weights
+from src.models.dataset import class_weights, sample_labels
 from src.models.metrics import OK_INDEX, evaluate
 
 
@@ -84,14 +84,6 @@ def new_type(train: tuple, val: tuple, holdout: str, k: int = 5, false_alarm: fl
             "auroc_vs_known_defects": float(roc_auc_score(new[pick], score[pick])),
             "auroc_vs_all_known": float(roc_auc_score(new, score)),
             "flagged_as_new": float((score[new] > threshold).mean()), "false_alarm": false_alarm}
-
-
-def sample_labels(y: np.ndarray, frac: float, seed: int) -> np.ndarray:
-    """Row indices: `frac` of each class, at least one wafer per class."""
-    rng = np.random.default_rng(seed)
-    rows = [rng.permutation(np.flatnonzero(y == c))[:max(1, round(frac * (y == c).sum()))]
-            for c in np.unique(y)]
-    return np.concatenate(rows)
 
 
 def probe(train: tuple, val: tuple, frac: float, seed: int = 0) -> dict:

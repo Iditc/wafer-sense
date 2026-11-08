@@ -12,7 +12,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.config import CHECKPOINT_DIR, RANDOM_SEED
-from src.models.dataset import WaferDataset
+from src.data.plot_utils import CLASSES
+from src.models.dataset import WaferDataset, sample_labels
 from src.models.metrics import evaluate, summary_line
 
 
@@ -29,11 +30,22 @@ def get_device() -> torch.device:
 
 
 def make_loaders(size: int = 64, batch_size: int = 256, num_workers: int = 2,
-                 limit: int | None = None, channels: int = 2,
-                 seed: int = RANDOM_SEED) -> dict[str, DataLoader]:
-    """Train (augmented, shuffled) and val (as is) loaders."""
+                 limit: int | None = None, channels: int = 2, seed: int = RANDOM_SEED,
+                 label_frac: float | None = None, exclude: str | None = None) -> dict[str, DataLoader]:
+    """Train (augmented, shuffled) and val (as is) loaders.
+
+    label_frac: train on this share of each class's train labels (the same wafers
+    the linear probe gets). exclude: drop one defect type from train and val, so the
+    model never sees it (fair baseline for the new-type test).
+    """
     train = WaferDataset("train", size, train_aug=True, limit=limit, seed=seed, channels=channels)
     val = WaferDataset("val", size, limit=limit, channels=channels)
+    if label_frac is not None:
+        train.keep(sample_labels(train.labels, label_frac))
+    if exclude is not None:
+        left_out = CLASSES.index(exclude)
+        for data in (train, val):
+            data.keep(np.flatnonzero(data.labels != left_out))
     kwargs = {"batch_size": batch_size, "num_workers": num_workers,
               "pin_memory": torch.cuda.is_available(), "persistent_workers": num_workers > 0}
     return {"train": DataLoader(train, shuffle=True, **kwargs),
