@@ -81,3 +81,31 @@ class WaferDataset(Dataset):
         if self.train_aug:
             x = augment(x, self.rng)
         return torch.from_numpy(x), int(self.labels[i])
+
+
+def split_rows(split: str, size: int = 64, subset: str = "all") -> np.ndarray:
+    """Rows of a map cache ('all' or 'labeled') whose wafers belong to one split."""
+    _, ids_path = cache_paths(size, subset)
+    split_df = pd.read_parquet(SPLIT_PARQUET, columns=["wafer_id", "split"])
+    in_split = split_df.loc[split_df["split"] == split, "wafer_id"].to_numpy()
+    return np.flatnonzero(np.isin(np.load(ids_path), in_split))
+
+
+class MapDataset(Dataset):
+    """Wafers of one split with no labels (for self-supervised training)."""
+
+    def __init__(self, split: str, size: int = 64, subset: str = "all",
+                 limit: int | None = None, seed: int = 0):
+        self.maps_path, _ = cache_paths(size, subset)
+        self.rows = split_rows(split, size, subset)
+        if limit is not None:
+            self.rows = np.random.default_rng(seed).permutation(self.rows)[:limit]
+        self._maps = None  # opened on first access, so DataLoader workers do not copy it
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def __getitem__(self, i: int) -> torch.Tensor:
+        if self._maps is None:
+            self._maps = np.load(self.maps_path, mmap_mode="r")
+        return torch.from_numpy(encode(self._maps[self.rows[i]]))
