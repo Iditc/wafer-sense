@@ -4,6 +4,7 @@ Run (Colab GPU): python -m src.models.train_cnn
 Quick local check: python -m src.models.train_cnn --limit 2000 --epochs 2 --workers 0 --name _smoke
 Few labels: --label-frac 0.01 (give more epochs: each epoch is short).
 Never-seen type: --exclude Scratch (val F1 macro then counts Scratch as 0; compare with the embedding tests).
+Fine-tune: --init simclr_t02 starts the conv blocks from that SimCLR checkpoint instead of random weights.
 """
 import argparse
 
@@ -11,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 
-from src.config import RANDOM_SEED
+from src.config import CHECKPOINT_DIR, RANDOM_SEED
 from src.data.plot_utils import save, setup_style
 from src.models.cnn import WaferCNN, count_params
 from src.models.dataset import class_weights
@@ -36,9 +37,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--label-frac", type=float, default=None,
                    help="train on this share of each class's labels (e.g. 0.01)")
     p.add_argument("--exclude", default=None, help="defect type left out of train and val (e.g. Scratch)")
+    p.add_argument("--init", default=None, help="SimCLR checkpoint name to start the conv blocks from")
     p.add_argument("--limit", type=int, default=None, help="use only N wafers per split (testing)")
     p.add_argument("--workers", type=int, default=2)
     return p.parse_args()
+
+
+def load_encoder(model: WaferCNN, name: str) -> None:
+    """Copy the conv blocks of a SimCLR checkpoint into the CNN; the class head stays random."""
+    state = torch.load(CHECKPOINT_DIR / f"{name}.pt", map_location="cpu")
+    blocks = {k.removeprefix("blocks."): v for k, v in state.items() if k.startswith("blocks.")}
+    model.blocks.load_state_dict(blocks)  # strict: every layer must match
+    print(f"Conv blocks loaded from {name}.pt ({len(blocks)} tensors)")
 
 
 def plot_history(history: list[dict], name: str) -> None:
@@ -62,6 +72,8 @@ def main() -> None:
     loaders = make_loaders(args.size, args.batch_size, args.workers, args.limit,
                            args.channels, args.seed, args.label_frac, args.exclude)
     model = WaferCNN(in_channels=args.channels)
+    if args.init is not None:
+        load_encoder(model, args.init)
     print(f"{count_params(model):,} parameters | device {get_device()} | "
           f"{len(loaders['train'].dataset):,} train / {len(loaders['val'].dataset):,} val wafers")
 
