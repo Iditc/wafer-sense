@@ -9,5 +9,8 @@ scikit-learn>=1.3
 # Week 2: models
 torch>=2.2
 
+# Week 3: similar-case search
+faiss-cpu>=1.9
+
 # Added in later weeks: torchvision, pytorch-ood, hdbscan,
-# grad-cam, faiss-cpu, mlflow, fastapi, streamlit, boto3
+# grad-cam, mlflow, fastapi, streamlit, boto3
