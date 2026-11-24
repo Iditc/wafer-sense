@@ -60,11 +60,11 @@ Remaining work after weeks 1–2, in 31 working days (day 0 to day 30). Days are
 |---|---|---|---|
 | 1 | Freeze the model: name, checkpoint, embedding version in `src/config.py` | Frozen train and val embeddings | Reloaded embeddings match the saved ones |
 | 2 | FAISS index over labeled train wafers | `src/features/retrieval.py` | precision@5 matches the current 0.866 |
-| 3 | Retrieval review by defect type | Query + 5 neighbors figures, failure notes | Weak types (Loc, Scratch) are explained |
+| 3 | Retrieval review: precision at k = 1, 5, 10, 20; how often neighbors share a lot; each neighbor shown with its lot | Query + neighbors figures with lot names, failure notes | Weak types (Loc, Scratch) explained; k and a per-lot neighbor limit chosen |
 | 4 | Leave-one-type-out CNNs for the other 7 defect types (two Colab sessions) | 8 held-out models with `cnn_noscratch` | All runs on Drive |
 | 5 | Compare new-type scores: max softmax, energy, kNN distance, Mahalanobis | `src/openset/scores.py`, AUROC per type | One score and threshold chosen on val |
 
-**Tests:** FAISS matches brute-force search on random vectors; a wafer finds itself first; the index never returns val or test wafers; each score ranks a known outlier highest; held-out runs contain no wafer of the held-out type. **Model check:** frozen checkpoint reproduces F1 0.895.
+**Tests:** FAISS matches brute-force search on random vectors; a wafer finds itself first; the index never returns val or test wafers; the per-lot limit is respected and still returns k neighbors; each score ranks a known outlier highest; held-out runs contain no wafer of the held-out type. **Model check:** frozen checkpoint reproduces F1 0.895.
 
 ## Week 4: Active learning and model review
 
@@ -102,9 +102,9 @@ If the gate says no-go, days 11–13 move the rest of the plan forward.
 | 17 | Excursion detector: binomial test and CUSUM across lots | `src/features/excursion.py` | Runs on all val lots |
 | 18 | Evaluate with **injected** excursions, since real ones are not labeled | Detection rate vs false alerts | Operating point chosen |
 | 19 | Yield impact: dies lost per wafer and per lot | `src/features/yield_impact.py` | Totals match the die counts |
-| 20 | One `analyze_wafer()` report combining all features | Structured JSON per wafer | Works end to end on val wafers |
+| 20 | One `analyze_wafer()` report combining all features, plus **similar-lot search**: each lot summarized as one vector (mean embedding and defect-type mix), nearest past lots returned | Structured JSON per wafer; `similar_lots()` | Works end to end on val wafers; a val lot's nearest past lots share its main defect type |
 
-**Tests:** normal synthetic lots raise no alert at the expected rate; an injected excursion is detected; empty and one-wafer lots do not crash; dies lost equal a hand-counted map; `analyze_wafer()` output follows a fixed schema. **Integration:** wafer in, complete report out.
+**Tests:** normal synthetic lots raise no alert at the expected rate; an injected excursion is detected; empty and one-wafer lots do not crash; dies lost equal a hand-counted map; `analyze_wafer()` output follows a fixed schema; a lot vector does not depend on wafer order; similar-lot search returns only train lots and never the query lot. **Integration:** wafer in, complete report out.
 
 ## Week 7: LLM agent
 
