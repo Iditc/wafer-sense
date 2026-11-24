@@ -1,6 +1,6 @@
 # WaferSense Plan
 
-Remaining work after weeks 1–2, in 31 working days (day 0 to day 30). Days are work units, not calendar dates.
+Remaining work after weeks 1–2, in 32 working days (day 0 to day 30, plus day 3b). Days are work units, not calendar dates.
 
 ## Where we stand
 
@@ -61,10 +61,11 @@ Remaining work after weeks 1–2, in 31 working days (day 0 to day 30). Days are
 | 1 | Freeze the model: name, checkpoint, embedding version in `src/config.py` | Frozen train and val embeddings | Reloaded embeddings match the saved ones |
 | 2 | FAISS index over labeled train wafers | `src/features/retrieval.py` | precision@5 matches the current 0.866 |
 | 3 | Retrieval review: precision at k = 1, 5, 10, 20; how often neighbors share a lot; each neighbor shown with its lot | Query + neighbors figures with lot names, failure notes | Weak types (Loc, Scratch) explained; k and a per-lot neighbor limit chosen |
+| 3b | Compare similarity methods: cosine (current), Euclidean, whitened cosine, mean over 8 rotations and flips, an earlier conv block, and defect-die overlap with no model. Score each by precision@5 per type **and** by a label-free measure: how much the neighbors' defect dies overlap the query's | `src/features/similarity.py`, one comparison table, example figures | One method chosen for search; the gallery uses it if it beats cosine by more than noise |
 | 4 | Leave-one-type-out CNNs for the other 7 defect types (two Colab sessions) | 8 held-out models with `cnn_noscratch` | All runs on Drive |
 | 5 | Compare new-type scores: max softmax, energy, kNN distance, Mahalanobis | `src/openset/scores.py`, AUROC per type | One score and threshold chosen on val |
 
-**Tests:** FAISS matches brute-force search on random vectors; a wafer finds itself first; the index never returns val or test wafers; the per-lot limit is respected and still returns k neighbors; each score ranks a known outlier highest; held-out runs contain no wafer of the held-out type. **Model check:** frozen checkpoint reproduces F1 0.895.
+**Tests:** FAISS matches brute-force search on random vectors; a wafer finds itself first; the index never returns val or test wafers; the per-lot limit is respected and still returns k neighbors; each similarity method gives the best match for an identical wafer, rotation-averaged embeddings are the same for a wafer and its rotations, and defect-die overlap is 1 for a rotated copy; each score ranks a known outlier highest; held-out runs contain no wafer of the held-out type. **Model check:** frozen checkpoint reproduces F1 0.895.
 
 ## Week 4: Active learning and model review
 
