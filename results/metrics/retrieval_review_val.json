@@ -1,0 +1,221 @@
+{
+  "split": "val",
+  "queries": 3821,
+  "precision_at_k": {
+    "1": {
+      "k": 1,
+      "macro": 0.8724125,
+      "per_class": {
+        "Center": 0.9289,
+        "Donut": 0.9036,
+        "Edge-Loc": 0.8151,
+        "Edge-Ring": 0.9828,
+        "Loc": 0.7353,
+        "Near-full": 0.9524,
+        "Random": 0.8803,
+        "Scratch": 0.7809
+      },
+      "hit_rate": 0.8898194190002617
+    },
+    "5": {
+      "k": 5,
+      "macro": 0.86565,
+      "per_class": {
+        "Center": 0.9264,
+        "Donut": 0.8771,
+        "Edge-Loc": 0.8046,
+        "Edge-Ring": 0.9807,
+        "Loc": 0.7397,
+        "Near-full": 0.9714,
+        "Random": 0.841,
+        "Scratch": 0.7843
+      },
+      "hit_rate": 0.9599581261449882
+    },
+    "10": {
+      "k": 10,
+      "macro": 0.8599,
+      "per_class": {
+        "Center": 0.9261,
+        "Donut": 0.859,
+        "Edge-Loc": 0.8036,
+        "Edge-Ring": 0.9788,
+        "Loc": 0.7369,
+        "Near-full": 0.9571,
+        "Random": 0.8368,
+        "Scratch": 0.7809
+      },
+      "hit_rate": 0.9751373985867574
+    },
+    "20": {
+      "k": 20,
+      "macro": 0.8521750000000001,
+      "per_class": {
+        "Center": 0.9267,
+        "Donut": 0.8524,
+        "Edge-Loc": 0.794,
+        "Edge-Ring": 0.9781,
+        "Loc": 0.7257,
+        "Near-full": 0.9333,
+        "Random": 0.8333,
+        "Scratch": 0.7739
+      },
+      "hit_rate": 0.9829887464014656
+    }
+  },
+  "precision_at_5_max_per_lot": {
+    "1": {
+      "k": 5,
+      "macro": 0.8651125,
+      "per_class": {
+        "Center": 0.9255,
+        "Donut": 0.8675,
+        "Edge-Loc": 0.8046,
+        "Edge-Ring": 0.9795,
+        "Loc": 0.7404,
+        "Near-full": 0.981,
+        "Random": 0.8393,
+        "Scratch": 0.7831
+      },
+      "hit_rate": 0.960743260926459
+    },
+    "2": {
+      "k": 5,
+      "macro": 0.8649249999999999,
+      "per_class": {
+        "Center": 0.9252,
+        "Donut": 0.8723,
+        "Edge-Loc": 0.8039,
+        "Edge-Ring": 0.9803,
+        "Loc": 0.7393,
+        "Near-full": 0.9714,
+        "Random": 0.8427,
+        "Scratch": 0.7843
+      },
+      "hit_rate": 0.9602198377388118
+    }
+  },
+  "lot_sharing_top5": {
+    "k": 5,
+    "mean_distinct_lots": 5.0,
+    "share_with_a_shared_lot": 0.0,
+    "share_all_from_one_lot": 0.0
+  },
+  "lot_sharing_top5_max_1_per_lot": {
+    "k": 5,
+    "mean_distinct_lots": 5.0,
+    "share_with_a_shared_lot": 0.0,
+    "share_all_from_one_lot": 0.0
+  },
+  "zero_hits_top5_by_class": {
+    "Center": 11,
+    "Donut": 3,
+    "Edge-Loc": 53,
+    "Edge-Ring": 10,
+    "Loc": 57,
+    "Near-full": 0,
+    "Random": 9,
+    "Scratch": 10
+  },
+  "neighbor_label_counts": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      170,
+      2997,
+      17,
+      3,
+      1,
+      37,
+      0,
+      10,
+      0
+    ],
+    [
+      6,
+      10,
+      364,
+      2,
+      0,
+      24,
+      0,
+      4,
+      5
+    ],
+    [
+      461,
+      19,
+      7,
+      3134,
+      143,
+      76,
+      3,
+      46,
+      6
+    ],
+    [
+      63,
+      1,
+      0,
+      63,
+      7120,
+      1,
+      0,
+      0,
+      12
+    ],
+    [
+      426,
+      112,
+      17,
+      88,
+      3,
+      2012,
+      0,
+      10,
+      52
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      102,
+      3,
+      0
+    ],
+    [
+      22,
+      17,
+      8,
+      23,
+      0,
+      19,
+      3,
+      492,
+      1
+    ],
+    [
+      107,
+      0,
+      3,
+      9,
+      5,
+      67,
+      0,
+      1,
+      698
+    ]
+  ]
+}
