@@ -1,0 +1,31 @@
+{
+  "name": "cnn_cosine",
+  "frozen_on": "2026-11-23",
+  "checkpoint": {
+    "file": "cnn_cosine.pt",
+    "sha256": "d8306153af8917809728e921ff9fb3d1f45fa92f467b7649403f484fa99844ed"
+  },
+  "embeddings": {
+    "file": "emb_cnn_cosine.npz",
+    "sha256": "f065bc39d725541b5c9a8e856175170757e717851c3e9ea96cfd042f69918845",
+    "dim": 256,
+    "n_train": 121096,
+    "n_val": 25856
+  },
+  "val": {
+    "f1_macro": 0.8954861259513999,
+    "accuracy": 0.9774520420792079,
+    "missed_defect_rate": 0.03245223763412719,
+    "false_alarm_rate": 0.014250056727932834
+  },
+  "recorded_val": {
+    "f1_macro": 0.8954861259513999,
+    "accuracy": 0.9774520420792079,
+    "missed_defect_rate": 0.03245223763412719,
+    "false_alarm_rate": 0.014250056727932834
+  },
+  "lowest_cosine": {
+    "val": 0.9999997615814209,
+    "train_sample": 0.9999997615814209
+  }
+}

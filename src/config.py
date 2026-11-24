@@ -20,3 +20,7 @@ RANDOM_SEED = 42
 # Model selection rule: highest val F1 macro among models whose missed-defect rate
 # (true defect predicted O.K.) is at most this. A parameter; compare.py tries other values.
 MAX_MISSED_DEFECT_RATE = 0.04
+
+# The model every feature builds on. Its file hashes and val results are in the manifest.
+FROZEN_MODEL = "cnn_cosine"
+FROZEN_MANIFEST = METRICS_DIR / "frozen_model.json"

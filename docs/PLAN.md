@@ -13,7 +13,7 @@ Remaining work after weeks 1–2, in 31 working days (day 0 to day 30). Days are
 | Fair checks | CNN beats SimCLR on 1% / 10% labels and on unseen Scratch |
 | SimCLR fine-tune | No gain over a random start (F1 0.894) |
 
-**Proposed decision:** freeze `cnn_cosine` as the classifier and the embedding (day 1).
+**Decision (day 1):** `cnn_cosine` is frozen as the classifier and the embedding. Its file hashes and val results are in `results/metrics/frozen_model.json`.
 
 ## Rules for the whole plan
 
