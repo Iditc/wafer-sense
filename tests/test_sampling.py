@@ -73,13 +73,14 @@ def test_loader_label_fraction_matches_probe_sample(tiny_cache):
     assert len(loaders["val"].dataset) == len(tiny_cache["val"])
 
 
-def test_loader_exclude_removes_type_from_train_and_val(tiny_cache):
-    scratch = CLASSES.index("Scratch")
-    loaders = make_loaders(num_workers=0, batch_size=4, exclude="Scratch")
+@pytest.mark.parametrize("defect", CLASSES[1:])
+def test_loader_exclude_removes_type_from_train_and_val(tiny_cache, defect):
+    left_out = CLASSES.index(defect)
+    loaders = make_loaders(num_workers=0, batch_size=4, exclude=defect)
     for split in ("train", "val"):
         kept = loaders[split].dataset.labels
-        assert scratch not in kept
-        assert len(kept) == (tiny_cache[split] != scratch).sum()
+        assert left_out not in kept
+        assert len(kept) == (tiny_cache[split] != left_out).sum()
 
 
 def test_loader_rejects_unknown_excluded_type(tiny_cache):
