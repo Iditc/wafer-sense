@@ -1,0 +1,145 @@
+{
+  "split": "val",
+  "k": 5,
+  "max_per_lot": 1,
+  "methods": {
+    "cosine": {
+      "precision_at_5": 0.8651,
+      "overlap": 0.4231,
+      "precision_gap_ci": [
+        0.0,
+        0.0
+      ],
+      "overlap_gap_ci": [
+        0.0,
+        0.0
+      ],
+      "ms_per_query": 0.581,
+      "per_class": {
+        "Center": 0.9255,
+        "Donut": 0.8675,
+        "Edge-Loc": 0.8046,
+        "Edge-Ring": 0.9795,
+        "Loc": 0.7404,
+        "Near-full": 0.981,
+        "Random": 0.8393,
+        "Scratch": 0.7831
+      }
+    },
+    "euclidean": {
+      "precision_at_5": 0.8499,
+      "overlap": 0.4193,
+      "precision_gap_ci": [
+        -0.0211,
+        -0.01
+      ],
+      "overlap_gap_ci": [
+        -0.0046,
+        -0.0028
+      ],
+      "ms_per_query": 0.823,
+      "per_class": {
+        "Center": 0.9147,
+        "Donut": 0.8434,
+        "Edge-Loc": 0.7936,
+        "Edge-Ring": 0.9763,
+        "Loc": 0.7368,
+        "Near-full": 0.9619,
+        "Random": 0.8291,
+        "Scratch": 0.7438
+      }
+    },
+    "whitened": {
+      "precision_at_5": 0.8485,
+      "overlap": 0.4306,
+      "precision_gap_ci": [
+        -0.0243,
+        -0.0084
+      ],
+      "overlap_gap_ci": [
+        0.0065,
+        0.0087
+      ],
+      "ms_per_query": 0.499,
+      "per_class": {
+        "Center": 0.9277,
+        "Donut": 0.8361,
+        "Edge-Loc": 0.7936,
+        "Edge-Ring": 0.9679,
+        "Loc": 0.7283,
+        "Near-full": 0.9524,
+        "Random": 0.8137,
+        "Scratch": 0.7685
+      }
+    },
+    "rot_mean": {
+      "precision_at_5": 0.8689,
+      "overlap": 0.4208,
+      "precision_gap_ci": [
+        -0.0034,
+        0.0108
+      ],
+      "overlap_gap_ci": [
+        -0.0032,
+        -0.0014
+      ],
+      "ms_per_query": 0.559,
+      "per_class": {
+        "Center": 0.9298,
+        "Donut": 0.8675,
+        "Edge-Loc": 0.819,
+        "Edge-Ring": 0.9795,
+        "Loc": 0.7665,
+        "Near-full": 0.9333,
+        "Random": 0.8444,
+        "Scratch": 0.8112
+      }
+    },
+    "block3": {
+      "precision_at_5": 0.7396,
+      "overlap": 0.4255,
+      "precision_gap_ci": [
+        -0.1404,
+        -0.1112
+      ],
+      "overlap_gap_ci": [
+        0.0012,
+        0.0036
+      ],
+      "ms_per_query": 0.315,
+      "per_class": {
+        "Center": 0.8102,
+        "Donut": 0.7518,
+        "Edge-Loc": 0.6642,
+        "Edge-Ring": 0.9712,
+        "Loc": 0.4397,
+        "Near-full": 0.8762,
+        "Random": 0.8171,
+        "Scratch": 0.5865
+      }
+    },
+    "overlap": {
+      "precision_at_5": 0.4866,
+      "overlap": 0.5101,
+      "precision_gap_ci": [
+        -0.3972,
+        -0.3602
+      ],
+      "overlap_gap_ci": [
+        0.0849,
+        0.0893
+      ],
+      "ms_per_query": 21.046,
+      "per_class": {
+        "Center": 0.7196,
+        "Donut": 0.3807,
+        "Edge-Loc": 0.4406,
+        "Edge-Ring": 0.9314,
+        "Loc": 0.2412,
+        "Near-full": 1.0,
+        "Random": 0.1453,
+        "Scratch": 0.0337
+      }
+    }
+  }
+}
