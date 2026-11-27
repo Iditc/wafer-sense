@@ -89,26 +89,34 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> None:
-    """Run one strategy, save the curve and the first and last confusion matrices."""
-    args = parse_args()
-    emb = run_embeddings(LEARNER)
+def run(
+    strategy: str,
+    rounds: int,
+    batch: int = BATCH,
+    seed: int = 0,
+    emb: dict | None = None,
+) -> list[dict]:
+    """Simulate one strategy, save its curve and its last-round confusion matrix."""
+    emb = emb or run_embeddings(LEARNER)
     history = simulate(
-        emb["train"],
-        emb["val"],
-        STRATEGIES[args.strategy],
-        args.rounds,
-        args.batch,
-        args.seed,
+        emb["train"], emb["val"], STRATEGIES[strategy], rounds, batch, seed
     )
-    tag = f"al_{args.strategy}_seed{args.seed}"
-    save_metrics({"learner": LEARNER, "config": vars(args), "history": history}, tag)
-    for h in (history[0], history[-1]):
-        plot_confusion(
-            h["confusion_matrix"],
-            f"{args.strategy}, {h['n_labels']:,} labels: F1 macro {h['f1_macro']:.3f}",
-            f"{tag}_round{h['round']}_confusion.png",
-        )
+    tag = f"al_{strategy}_seed{seed}"
+    config = {"strategy": strategy, "rounds": rounds, "batch": batch, "seed": seed}
+    save_metrics({"learner": LEARNER, "config": config, "history": history}, tag)
+    last = history[-1]
+    plot_confusion(
+        last["confusion_matrix"],
+        f"{strategy}, {last['n_labels']:,} labels: F1 macro {last['f1_macro']:.3f}",
+        f"{tag}_round{last['round']}_confusion.png",
+    )
+    return history
+
+
+def main() -> None:
+    """Run one strategy from the command line."""
+    args = parse_args()
+    run(args.strategy, args.rounds, args.batch, args.seed)
 
 
 if __name__ == "__main__":
