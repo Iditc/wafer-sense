@@ -4,6 +4,8 @@ Run (Colab GPU): python -m src.models.train_cnn
 Quick local check: python -m src.models.train_cnn --limit 2000 --epochs 2 --workers 0 --name _smoke
 Few labels: --label-frac 0.01 (give more epochs: each epoch is short).
 Never-seen type: --exclude Scratch (val F1 macro then counts Scratch as 0; compare with the embedding tests).
+Active-learning label set: --al-strategy margin --al-budget 4840 trains on the first
+4,840 wafers that strategy picked in the simulation (week 4, day 8b).
 Fine-tune: --init simclr_t02 starts the conv blocks from that SimCLR checkpoint instead of random weights.
 """
 import argparse
@@ -12,6 +14,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 
+from src.active.full_cnn import budget_rows
 from src.config import CHECKPOINT_DIR, RANDOM_SEED
 from src.data.plot_utils import save, setup_style
 from src.models.cnn import WaferCNN, count_params
@@ -37,6 +40,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--label-frac", type=float, default=None,
                    help="train on this share of each class's labels (e.g. 0.01)")
     p.add_argument("--exclude", default=None, help="defect type left out of train and val (e.g. Scratch)")
+    p.add_argument("--al-strategy", default=None, help="label set picked by this AL strategy")
+    p.add_argument("--al-budget", type=int, default=None, help="number of labels of that set")
     p.add_argument("--init", default=None, help="SimCLR checkpoint name to start the conv blocks from")
     p.add_argument("--limit", type=int, default=None, help="use only N wafers per split (testing)")
     p.add_argument("--workers", type=int, default=2)
@@ -69,8 +74,11 @@ def main() -> None:
     """Train, pick the best epoch on val, and save val metrics and figures."""
     args = parse_args()
     set_seed(args.seed)
+    rows = None
+    if args.al_strategy is not None:
+        rows = budget_rows(args.al_strategy, args.al_budget)
     loaders = make_loaders(args.size, args.batch_size, args.workers, args.limit,
-                           args.channels, args.seed, args.label_frac, args.exclude)
+                           args.channels, args.seed, args.label_frac, args.exclude, rows)
     model = WaferCNN(in_channels=args.channels)
     if args.init is not None:
         load_encoder(model, args.init)

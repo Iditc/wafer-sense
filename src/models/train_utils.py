@@ -31,17 +31,21 @@ def get_device() -> torch.device:
 
 def make_loaders(size: int = 64, batch_size: int = 256, num_workers: int = 2,
                  limit: int | None = None, channels: int = 2, seed: int = RANDOM_SEED,
-                 label_frac: float | None = None, exclude: str | None = None) -> dict[str, DataLoader]:
+                 label_frac: float | None = None, exclude: str | None = None,
+                 label_rows: np.ndarray | None = None) -> dict[str, DataLoader]:
     """Train (augmented, shuffled) and val (as is) loaders.
 
     label_frac: train on this share of each class's train labels (the same wafers
     the linear probe gets). exclude: drop one defect type from train and val, so the
-    model never sees it (fair baseline for the new-type test).
+    model never sees it (fair baseline for the new-type test). label_rows: train only
+    on these positions of the train split (a label set chosen by active learning).
     """
     train = WaferDataset("train", size, train_aug=True, limit=limit, seed=seed, channels=channels)
     val = WaferDataset("val", size, limit=limit, channels=channels)
     if label_frac is not None:
         train.keep(sample_labels(train.labels, label_frac))
+    if label_rows is not None:
+        train.keep(label_rows)
     if exclude is not None:
         left_out = CLASSES.index(exclude)
         for data in (train, val):
