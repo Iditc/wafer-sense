@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 
@@ -86,15 +87,19 @@ def new_type(train: tuple, val: tuple, holdout: str, k: int = 5, false_alarm: fl
             "flagged_as_new": float((score[new] > threshold).mean()), "false_alarm": false_alarm}
 
 
-def probe(train: tuple, val: tuple, frac: float, seed: int = 0) -> dict:
-    """Linear classifier on the embedding, trained on `frac` of the train labels.
+def fit_probe(x: np.ndarray, y: np.ndarray):
+    """Scaler + logistic regression fit on labeled embeddings; returns a fitted pipeline.
 
     Class weights 1/sqrt(count), as in the CNN ('balanced' = 1/count flags too many O.K. wafers).
     """
+    weights = class_weights(y).numpy()
+    clf = LogisticRegression(max_iter=2000, class_weight={c: float(weights[c]) for c in np.unique(y)})
+    return make_pipeline(StandardScaler(), clf).fit(x, y)
+
+
+def probe(train: tuple, val: tuple, frac: float, seed: int = 0) -> dict:
+    """Linear classifier on the embedding, trained on `frac` of the train labels."""
     (x, y), (vx, vy) = train, val
     rows = sample_labels(y, frac, seed)
-    weights = class_weights(y[rows]).numpy()
-    scaler = StandardScaler().fit(x[rows])
-    clf = LogisticRegression(max_iter=2000, class_weight={c: float(weights[c]) for c in np.unique(y)})
-    clf.fit(scaler.transform(x[rows]), y[rows])
-    return {"frac": frac, "n_train": int(len(rows)), **evaluate(vy, clf.predict(scaler.transform(vx)))}
+    model = fit_probe(x[rows], y[rows])
+    return {"frac": frac, "n_train": int(len(rows)), **evaluate(vy, model.predict(vx))}

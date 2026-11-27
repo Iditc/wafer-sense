@@ -71,11 +71,14 @@ Remaining work after weeks 1–2, in 32 working days (day 0 to day 30, plus day 
 
 The 638K unlabeled wafers have no true labels, so active learning is **simulated**: labeled train wafers start hidden and are revealed when selected.
 
+**Learner (decided before day 6):** a linear probe on the frozen `cnn_frac01` embedding, refit each round. That CNN saw only the same 1% start labels (`sample_labels`, seed 0), so no label leaks in, and a round takes seconds on CPU. Every seed starts from that same 1%; seeds change only the selection. Rejected: a probe on `cnn_cosine` (its embedding already learned all labels), a probe on SimCLR (honest but weak: 0.565 at 1%, 0.77 at 100%), and retraining the full CNN each round (about 120 Colab runs). **Known gap:** the frozen embedding cannot learn new features (probe 0.797 vs full CNN 0.895 at 100% labels), so a strategy that picks hard or rare wafers may look weaker than it is. Day 8b checks this with the full CNN.
+
 | Day | Work | Output | Done when |
 |---|---|---|---|
-| 6 | Simulation loop: start from 1% of labels, fixed val | `src/active/simulate.py` | Random selection reproduces the 1% baseline |
+| 6 | Simulation loop: start from 1% of labels, fixed val | `src/active/simulate.py` | Random selection reproduces the 1% probe baseline (F1 0.646) |
 | 7 | Strategies: random, entropy, margin, diversity (k-center) | `src/active/strategies.py` | All run on a small subset |
-| 8 | Full simulation, 3 seeds | F1 vs labels-used curves | Labels needed to reach F1 0.85 per strategy |
+| 8 | Full simulation, 3 seeds | F1 vs labels-used curves | Labels needed to reach F1 0.75 per strategy (0.85 is above the probe's ceiling of ~0.80) |
+| 8b | Full-CNN check on Colab: the winning strategy vs random, 1 seed, about 4 label budgets (~8 runs, ~4 GPU hours) | Same curves with the full CNN | Same direction as day 8, or the difference written down |
 | 9 | Label check: wafers whose neighbors and model disagree with their label | Ranked list and figures of likely wrong labels | Share of suspect labels estimated |
 | 10 | **Model review gate** (see below) | Written go / no-go | Decision recorded here |
 
