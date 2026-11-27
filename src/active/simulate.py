@@ -5,15 +5,15 @@ trained on, so no label leaks into the embedding) is revealed; then each round
 a strategy picks `batch` more wafers, the oracle reveals their labels, a linear
 probe is refit on the frozen cnn_frac01 embedding and scored on the fixed val set.
 Seeds change only the selection, never the start set.
-Run: python -m src.active.simulate --strategy random --rounds 10
+Strategies are in src/active/strategies.py.
+Run: python -m src.active.simulate --strategy entropy --rounds 10
 """
 
 import argparse
-from collections.abc import Callable
-from dataclasses import dataclass
 
 import numpy as np
 
+from src.active.strategies import STRATEGIES, Round, Strategy
 from src.models.dataset import sample_labels
 from src.models.embed_eval import fit_probe
 from src.models.metrics import evaluate, plot_confusion, save_metrics, summary_line
@@ -42,28 +42,6 @@ class Oracle:
         """Rows revealed so far and their labels (the only labels anyone sees)."""
         rows = np.flatnonzero(self.revealed)
         return rows, self._labels[rows]
-
-
-@dataclass
-class Round:
-    """What a strategy may look at: embeddings, the current model, the unlabeled rows."""
-
-    x: np.ndarray
-    model: object
-    unlabeled: np.ndarray
-    n: int
-    rng: np.random.Generator
-
-
-Strategy = Callable[[Round], np.ndarray]
-
-
-def random_strategy(state: Round) -> np.ndarray:
-    """n unlabeled rows drawn uniformly at random."""
-    return state.rng.choice(state.unlabeled, size=state.n, replace=False)
-
-
-STRATEGIES: dict[str, Strategy] = {"random": random_strategy}
 
 
 def simulate(
@@ -97,7 +75,7 @@ def simulate(
         if r == rounds or len(unlabeled) == 0:
             break
         n = min(batch, len(unlabeled))
-        oracle.reveal(strategy(Round(x, model, unlabeled, n, rng)))
+        oracle.reveal(strategy(Round(x, model, rows, unlabeled, n, rng)))
     return history
 
 

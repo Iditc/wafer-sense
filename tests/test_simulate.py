@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from src.active import simulate as sim
+from src.active.strategies import random_strategy
 from src.data.plot_utils import CLASSES
 
 
@@ -46,7 +47,7 @@ def test_budget_and_no_repeats(data):
     seen = []
 
     def spy(state):
-        pick = sim.random_strategy(state)
+        pick = random_strategy(state)
         assert len(pick) == state.n
         assert not np.isin(pick, np.concatenate(seen)).any() if seen else True
         seen.append(pick)
@@ -64,15 +65,15 @@ def test_strategy_sees_only_unlabeled_train_rows(data):
     def check(state):
         assert state.unlabeled.max() < len(train[1])
         assert state.x is train[0]
-        return sim.random_strategy(state)
+        return random_strategy(state)
 
     sim.simulate(*data, check, rounds=2, batch=10)
 
 
 def test_same_seed_same_curve(data):
     """The same seed gives the same selections and results."""
-    a = sim.simulate(*data, sim.random_strategy, rounds=2, batch=15, seed=3)
-    b = sim.simulate(*data, sim.random_strategy, rounds=2, batch=15, seed=3)
+    a = sim.simulate(*data, random_strategy, rounds=2, batch=15, seed=3)
+    b = sim.simulate(*data, random_strategy, rounds=2, batch=15, seed=3)
     assert [h["f1_macro"] for h in a] == [h["f1_macro"] for h in b]
 
 
@@ -81,12 +82,12 @@ def test_start_set_matches_the_learner(data):
     train, _ = data
     expected = len(sim.sample_labels(train[1], sim.START_FRAC, sim.START_SEED))
     for seed in (0, 1):
-        history = sim.simulate(*data, sim.random_strategy, rounds=0, seed=seed)
+        history = sim.simulate(*data, random_strategy, rounds=0, seed=seed)
         assert history[0]["n_labels"] == expected
 
 
 def test_stops_when_pool_is_empty(data):
     """A batch larger than the pool labels everything and stops."""
     train, _ = data
-    history = sim.simulate(*data, sim.random_strategy, rounds=5, batch=10_000)
+    history = sim.simulate(*data, random_strategy, rounds=5, batch=10_000)
     assert history[-1]["n_labels"] == len(train[1])
